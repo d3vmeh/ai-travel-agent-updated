@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:google.github.io)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

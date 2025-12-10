@@ -1,6 +1,6 @@
 requests
 amadeus
-duckduckgo-search
+ddgs
 beautifulsoup4
 google-adk
 python-dotenv
