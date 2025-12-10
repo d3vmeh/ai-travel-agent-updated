@@ -1,1 +1,7 @@
 venv/
+.env
+__pycache__/
+travel_agent/.env
+travel_agent/__pycache__/
+travel_agent/.adk/
+old/

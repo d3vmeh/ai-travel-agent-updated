@@ -2,3 +2,5 @@ requests
 amadeus
 duckduckgo-search
 beautifulsoup4
+google-adk
+python-dotenv
