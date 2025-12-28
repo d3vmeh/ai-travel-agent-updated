@@ -1,6 +1,6 @@
 # AI Travel Agent
 
-An AI-powered travel assistant that uses Google's Agent Development Kit, capable of searching flights and providing travel information through web search.
+An AI-powered travel assistant that uses Google's Agent Development Kit, capable of searching flights, hotels, and providing travel information through web search.
 
 ## Features
 
@@ -9,9 +9,14 @@ An AI-powered travel assistant that uses Google's Agent Development Kit, capable
   - Support for multiple airlines
   - View departure/arrival times and seat availability
 
+- **Hotel Search**: Search for available hotels using the Amadeus API
+  - Find hotels in cities worldwide
+  - Get pricing, ratings, and room details
+  - View hotel addresses and amenities
+
 - **Web Search**: Search the web for travel-related information
   - Find destination guides, travel tips, and recommendations
-  - Search for hotels, restaurants, and attractions
+  - Search for attractions, restaurants, and activities
 
 ## Setup
 
