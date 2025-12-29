@@ -5,6 +5,7 @@ from datetime import datetime
 from amadeus import Client, ResponseError
 from ddgs import DDGS
 from bs4 import BeautifulSoup
+import requests
 import random
 import time
 from dotenv import load_dotenv
@@ -93,7 +94,7 @@ def check_flights(destination: str, departure_date: str, origin: str) -> dict:
             return {"status": "success", "flights": flights}
 
         return {"status": "error", "error": "No flights found"}
-    
+
     except ResponseError as e:
         return {"status": "error", "error": f"Error checking flights: {str(e)}"}
     except Exception as e:
@@ -177,7 +178,6 @@ def check_hotels(city_code: str, check_in_date: str, check_out_date: str, adults
 
                         if len(hotels) >= 15:
                             break
-            # Provide helpful error message if filtering by price
 
             except ResponseError as batch_error:
                 continue
@@ -199,6 +199,83 @@ def check_hotels(city_code: str, check_in_date: str, check_out_date: str, adults
     except Exception as e:
         return {"status": "error", "error": f"Unexpected error: {str(e)}"}
 
+def check_weather(location: str, date: str) -> dict:
+    """
+    Get the weather forecast for a specific location and date.
+    Uses Open-Meteo API which provides free weather forecasts up to 16 days.
+
+    Args:
+        location (str): The location to get the weather for (city name)
+        date (str): Date in format mm/dd/yy (e.g., '01/15/26')
+
+    Returns:
+        dict: Dictionary with 'status' and 'weather' or 'error' containing forecast information
+    """
+    try:
+        geocode_url = f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
+        geo_response = requests.get(geocode_url)
+        geo_data = geo_response.json()
+
+        if not geo_data.get('results'):
+            return {"status": "error", "error": f"Could not find location: {location}"}
+
+        latitude = geo_data['results'][0]['latitude']
+        longitude = geo_data['results'][0]['longitude']
+        location_name = geo_data['results'][0]['name']
+        country = geo_data['results'][0].get('country', '')
+
+        formatted_date = datetime.strptime(date, '%m/%d/%y').strftime('%Y-%m-%d')
+
+        weather_url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={latitude}&longitude={longitude}"
+            f"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode,windspeed_10m_max"
+            f"&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch"
+            f"&timezone=auto"
+            f"&start_date={formatted_date}&end_date={formatted_date}"
+        )
+
+        weather_response = requests.get(weather_url)
+        weather_data = weather_response.json()
+
+        if weather_response.status_code != 200 or 'daily' not in weather_data:
+            return {"status": "error", "error": "Could not retrieve weather data for the specified date"}
+
+        daily = weather_data['daily']
+
+        weather_codes = {
+            0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Foggy", 48: "Depositing rime fog",
+            51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+            61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+            71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+            77: "Snow grains", 80: "Slight rain showers", 81: "Moderate rain showers",
+            82: "Violent rain showers", 85: "Slight snow showers", 86: "Heavy snow showers",
+            95: "Thunderstorm", 96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail"
+        }
+
+        weather_code = daily['weathercode'][0]
+        description = weather_codes.get(weather_code, "Unknown")
+
+        weather_info = {
+            'location': f"{location_name}, {country}" if country else location_name,
+            'date': formatted_date,
+            'temperature_high': f"{daily['temperature_2m_max'][0]:.1f}°F",
+            'temperature_low': f"{daily['temperature_2m_min'][0]:.1f}°F",
+            'description': description,
+            'precipitation': f"{daily['precipitation_sum'][0]:.2f} inches",
+            'precipitation_probability': f"{daily['precipitation_probability_max'][0]}%",
+            'max_wind_speed': f"{daily['windspeed_10m_max'][0]:.1f} mph"
+        }
+
+        return {"status": "success", "weather": weather_info}
+
+    except ValueError as e:
+        return {"status": "error", "error": f"Invalid date format. Please use mm/dd/yy format: {str(e)}"}
+    except requests.RequestException as e:
+        return {"status": "error", "error": f"Error contacting weather service: {str(e)}"}
+    except Exception as e:
+        return {"status": "error", "error": f"Error getting weather forecast: {str(e)}"}
 
 def web_search(query: str, num_results: int) -> dict:
     """
