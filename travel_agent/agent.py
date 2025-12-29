@@ -4,7 +4,7 @@ from tools import check_flights, check_hotels, check_weather
 from datetime import date
 
 flight_agent = Agent(
-    model='gemini-2.0-flash',
+    model='gemini-2.5-flash',
     name='flight_agent',
     description='A helpful assistant for flight searches.',
     instruction='You are a helpful assistant that can search for flights.',
@@ -12,7 +12,7 @@ flight_agent = Agent(
 )
 
 hotel_agent = Agent(
-    model='gemini-2.0-flash',
+    model='gemini-2.5-flash',
     name='hotel_agent',
     description='A helpful assistant for hotel searches with price filtering.',
     instruction="""You are a helpful assistant that can search for available hotels in cities.
@@ -32,7 +32,7 @@ When the user specifies a budget (e.g., $150-$250 per night), use the min_price_
 )
 
 weather_agent = Agent(
-    model='gemini-2.0-flash',
+    model='gemini-2.5-flash',
     name='weather_agent',
     description='A helpful assistant for checking weather forecasts on specific dates',
     instruction="""You are a helpful assistant that can check weather forecasts for specific dates up to 16 days in the future.
@@ -53,8 +53,16 @@ IMPORTANT: Always present the weather information clearly to the user, including
     tools=[check_weather]
 )
 
+web_search_agent = Agent(
+    model='gemini-2.5-flash',
+    name='web_search_agent',
+    description='An assistant with the ability to search Google',
+    instruction='You are a helpful assistant who can conduct web searches',
+    tools=[google_search]
+)
+
 root_agent = Agent(
-    model='gemini-2.0-flash',
+    model='gemini-2.5-flash',
     name='root_agent',
     instruction=f"""You are a helpful travel agent that helps people plan out their vacations. You must answer the user's queries in the following steps.
 1. Ensure what they are asking is clear. If you are unsure, ask clarifying questions before making the plan.
@@ -64,14 +72,15 @@ root_agent = Agent(
 For reference, the current date is: {date.today()}. If the user does not provide the year, assume it is the current year if the date has not already passed.
 If the date has passed, then assume it is the next year.
 
-Here are the tools you can use:
+Here are the tools you can use to develop the full plan:
 
 - flight_agent: This is a flight planning agent you can ask about the current flights available from one airport to another on a specific date.
 - hotel_agent: This is a hotel search agent you can ask about available hotels in a city for specific check-in and check-out dates. It can filter hotels by price range (min/max price per night). The agent returns hotel prices, so you CAN provide pricing information to users.
 - weather_agent: This is a weather forecast agent you can ask about the weather forecast on a particular date (up to 16 days in the future). It provides temperature highs/lows, precipitation, and weather conditions.
+- web_search_agent: This is a web search agent that you can use to search up queries on Google. It can provide useful information on recent news and suggested activities for the user to visit.
 
 IMPORTANT: When users specify a budget for hotels, pass those values to the hotel_agent as min_price_per_night and max_price_per_night parameters. The hotel_agent WILL return prices - always show them to the user.
 
 Provide detailed, thorough responses.""",
-    tools = [AgentTool(flight_agent), AgentTool(hotel_agent), AgentTool(weather_agent)],
+    tools = [AgentTool(flight_agent), AgentTool(hotel_agent), AgentTool(weather_agent), AgentTool(web_search_agent)],
 )

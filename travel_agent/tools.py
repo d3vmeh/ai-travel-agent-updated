@@ -276,36 +276,3 @@ def check_weather(location: str, date: str) -> dict:
         return {"status": "error", "error": f"Error contacting weather service: {str(e)}"}
     except Exception as e:
         return {"status": "error", "error": f"Error getting weather forecast: {str(e)}"}
-
-def web_search(query: str, num_results: int) -> dict:
-    """
-    Perform a web search and return search results.
-
-    Args:
-        query (str): Search query
-        num_results (int): Number of results to return
-
-    Returns:
-        dict: Dictionary with 'status' and 'results' or 'error' containing search results
-    """
-    try:
-        ddgs = DDGS()
-        search_results = list(ddgs.text(query, max_results=num_results))
-
-        if not search_results:
-            return {"status": "error", "error": "No search results found"}
-
-        results = []
-        for result in search_results:
-            formatted_result = {
-                'title': result.get('title', 'No title'),
-                'summary': result.get('body', 'No summary'),
-                'url': result.get('href', '')
-            }
-            results.append(formatted_result)
-
-        print(results)
-        return {"status": "success", "results": results}
-
-    except Exception as e:
-        return {"status": "error", "error": f"Error performing web search: {str(e)}"}
