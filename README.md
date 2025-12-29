@@ -11,8 +11,14 @@ An AI-powered travel assistant that uses Google's Agent Development Kit, capable
 
 - **Hotel Search**: Search for available hotels using the Amadeus API
   - Find hotels in cities worldwide
+  - Filter by price range (min/max per night)
   - Get pricing, ratings, and room details
   - View hotel addresses and amenities
+
+- **Weather Forecast**: Check weather forecasts using Open-Meteo API
+  - Get forecasts up to 16 days in advance
+  - View temperature highs/lows, precipitation, and conditions
+  - Free with no API key required
 
 - **Web Search**: Search the web for travel-related information
   - Find destination guides, travel tips, and recommendations
@@ -24,7 +30,7 @@ An AI-powered travel assistant that uses Google's Agent Development Kit, capable
 
 - Python 3.12 or higher
 - A Google API key (for Gemini)
-- Amadeus API credentials (for flight search)
+- Amadeus API credentials (for flight and hotel search)
 
 ### Installation
 
@@ -37,7 +43,7 @@ An AI-powered travel assistant that uses Google's Agent Development Kit, capable
 2. **Create a virtual environment** (recommended)
    ```bash
    python -m venv venv
-   source venv/bin/activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
@@ -62,9 +68,17 @@ An AI-powered travel assistant that uses Google's Agent Development Kit, capable
 Navigate to the project root directory (where `.env` and `travel_agent/` are located) and run:
 
 ```bash
-adk run travel_agent
+adk web --port 8000
 ```
 
-This will start a session where you can ask the travel agent to:
-- Search for flights between airports
-- Get travel recommendations and information via web search
+This will start the web UI server. Open your browser and navigate to:
+
+```
+http://localhost:8000
+```
+
+You can now interact with the travel agent through the web interface to:
+- Search for flights between airports (use IATA codes like SFO, LAX, JFK)
+- Find hotels in cities with optional price filtering
+- Check weather forecasts for specific dates (up to 16 days ahead)
+- Get travel recommendations and destination information via web search
