@@ -281,6 +281,90 @@ def check_weather(location: str, date: str) -> dict:
         return {"status": "error", "error": f"Error getting weather forecast: {str(e)}"}
 
 
+def check_car_rentals(
+    pickup_location: str,
+    pickup_date: str,
+    dropoff_date: str,
+    pickup_time: str = "10:00",
+    dropoff_time: str = "10:00"
+) -> dict:
+    """
+    Search for available car rentals at airports or cities.
+
+    Args:
+        pickup_location (str): Airport IATA code (e.g., 'LAX', 'JFK', 'ORD')
+        pickup_date (str): Pickup date in format mm/dd/yy (e.g., '12/13/25')
+        dropoff_date (str): Drop-off date in format mm/dd/yy (e.g., '12/15/25')
+        pickup_time (str): Pickup time in HH:MM format (default: '10:00')
+        dropoff_time (str): Drop-off time in HH:MM format (default: '10:00')
+
+    Returns:
+        dict: Dictionary with 'status' and 'cars' or 'error' containing rental details
+    """
+    try:
+        formatted_pickup = datetime.strptime(pickup_date, '%m/%d/%y').strftime('%Y-%m-%d')
+        formatted_dropoff = datetime.strptime(dropoff_date, '%m/%d/%y').strftime('%Y-%m-%d')
+
+        url = "https://booking-com15.p.rapidapi.com/api/v1/cars/searchCarRentals"
+
+        headers = {
+            "x-rapidapi-key": os.getenv('RAPIDAPI_KEY'),
+            "x-rapidapi-host": "booking-com15.p.rapidapi.com"
+        }
+
+        params = {
+            "pick_up_location": pickup_location,
+            "pick_up_date": formatted_pickup,
+            "pick_up_time": pickup_time,
+            "drop_off_date": formatted_dropoff,
+            "drop_off_time": dropoff_time,
+            "currency_code": "USD"
+        }
+
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json()
+
+        if response.status_code != 200:
+            return {"status": "error", "error": f"API request failed: {response.status_code}"}
+
+        if not data.get('data') or not data['data'].get('search_results'):
+            return {"status": "error", "error": "No car rentals found for the specified location and dates"}
+
+        cars = []
+        for car in data['data']['search_results'][:20]:
+            vehicle = car.get('vehicle_info', {})
+            pricing = car.get('pricing_info', {})
+            supplier = car.get('supplier_info', {})
+
+            car_info = {
+                'company': supplier.get('name', 'Unknown'),
+                'car_type': vehicle.get('group', 'Standard'),
+                'car_name': vehicle.get('v_name', 'N/A'),
+                'transmission': vehicle.get('transmission', 'Automatic'),
+                'seats': vehicle.get('seats', 'N/A'),
+                'bags': vehicle.get('baggage', 'N/A'),
+                'air_conditioning': vehicle.get('aircon', False),
+                'price_per_day': f"${float(pricing.get('price_per_day', 0)):.2f}",
+                'total_price': f"${float(pricing.get('total_price', pricing.get('price', 0))):.2f}",
+                'fuel_policy': car.get('fuel_policy', 'N/A'),
+                'mileage': car.get('mileage', 'Unlimited')
+            }
+            cars.append(car_info)
+
+        if cars:
+            cars.sort(key=lambda x: float(x['total_price'].replace('$', '')))
+            return {"status": "success", "cars": cars[:10]}
+
+        return {"status": "error", "error": "No car rentals found for the specified dates"}
+
+    except ValueError as e:
+        return {"status": "error", "error": f"Invalid date format. Use mm/dd/yy: {str(e)}"}
+    except requests.RequestException as e:
+        return {"status": "error", "error": f"Error contacting car rental service: {str(e)}"}
+    except Exception as e:
+        return {"status": "error", "error": f"Error searching car rentals: {str(e)}"}
+
+
 flight_agent = Agent(
     model='gemini-2.5-flash',
     name='flight_agent',
@@ -339,6 +423,36 @@ web_search_agent = Agent(
     tools=[google_search]
 )
 
+car_rental_agent = Agent(
+    model='gemini-2.5-flash',
+    name='car_rental_agent',
+    description='A helpful assistant for searching car rentals at airports and cities.',
+    instruction="""You are a helpful assistant that searches for car rentals.
+
+The check_car_rentals function requires:
+- pickup_location (str): Airport IATA code (e.g., 'LAX', 'JFK', 'ORD', 'CDG')
+- pickup_date (str): Pickup date in mm/dd/yy format
+- dropoff_date (str): Drop-off date in mm/dd/yy format
+- pickup_time (str): Optional, defaults to '10:00'
+- dropoff_time (str): Optional, defaults to '10:00'
+
+The function returns car rental information including:
+- company: Rental company name (Hertz, Enterprise, Avis, etc.)
+- car_type: Vehicle class (Economy, Compact, SUV, etc.)
+- car_name: Specific vehicle model
+- transmission: Automatic or Manual
+- seats: Passenger capacity
+- bags: Luggage capacity
+- air_conditioning: Whether AC is included
+- price_per_day: Daily rental rate in USD
+- total_price: Total cost for the rental period
+- fuel_policy: Fuel policy details
+- mileage: Mileage allowance (often Unlimited)
+
+IMPORTANT: Always present pricing clearly (both per-day and total) and help users compare options by vehicle type and rental company.""",
+    tools=[check_car_rentals]
+)
+
 root_agent = Agent(
     model='gemini-2.5-flash',
     name='root_agent',
@@ -355,10 +469,11 @@ Here are the tools you can use to develop the full plan:
 - flight_agent: This is a flight planning agent you can ask about the current flights available from one airport to another on a specific date.
 - hotel_agent: This is a hotel search agent you can ask about available hotels in a city for specific check-in and check-out dates. It can filter hotels by price range (min/max price per night). The agent returns hotel prices, so you CAN provide pricing information to users.
 - weather_agent: This is a weather forecast agent you can ask about the weather forecast on a particular date (up to 16 days in the future). It provides temperature highs/lows, precipitation, and weather conditions.
+- car_rental_agent: This is a car rental search agent you can ask about available rental cars at airports or cities. It returns pricing, vehicle types (economy, compact, SUV, etc.), rental companies, and details like transmission type and passenger capacity.
 - web_search_agent: This is a web search agent that you can use to search up queries on Google. It can provide useful information on recent news and suggested activities for the user to visit.
 
 IMPORTANT: When users specify a budget for hotels, pass those values to the hotel_agent as min_price_per_night and max_price_per_night parameters. The hotel_agent WILL return prices - always show them to the user.
 
 Provide detailed, thorough responses.""",
-    tools = [AgentTool(flight_agent), AgentTool(hotel_agent), AgentTool(weather_agent), AgentTool(web_search_agent)],
+    tools = [AgentTool(flight_agent), AgentTool(hotel_agent), AgentTool(weather_agent), AgentTool(car_rental_agent), AgentTool(web_search_agent)],
 )
